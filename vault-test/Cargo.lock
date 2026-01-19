@@ -3655,6 +3655,7 @@ dependencies = [
 name = "vault-test"
 version = "0.1.0"
 dependencies = [
+ "five8 1.0.0",
  "litesvm",
  "serde_json",
  "solana-address 2.0.0",

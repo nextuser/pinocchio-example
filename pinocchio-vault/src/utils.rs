@@ -17,8 +17,8 @@ pub fn parse_amount(data : &[u8] ) -> Result<u64, ProgramError>{
 }
 
 
-pub fn derive_vault_pda(owner : &Address) -> (Address,u8){
-    let seeds = [b"valult",owner.as_ref()];
+pub  fn derive_vault_pda(owner : &Address) -> (Address, u8,[&[u8];2]){
+    let seeds: [&[u8]; 2] = [b"vault",owner.as_ref()];
     let (pda, bump) = Address::find_program_address(&seeds, &crate::ID);
-    (pda,bump)
+    (pda,bump,seeds)
 }

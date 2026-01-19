@@ -19,24 +19,27 @@ pub fn encure_pda_created(
 
     let space =  ACCOUNT_DISCRIMINATOR_SIZE + core::mem::size_of::<u64>();
 
-    let seeds = [b"vault",owner.address().as_ref()];
-    let (expected_pda, bump) = Address::find_program_address(&seeds, &crate::ID);
+    //let seeds = [b"vault",owner.address().as_ref()];
+    //let (expected_pda, bump) = Address::find_program_address(&seeds, &crate::ID);
+    let (expected_pda ,bump,seeds) = crate::utils::derive_vault_pda(owner.address());
     if pda.address() != &expected_pda {
         return Err(ProgramError::InvalidSeeds);
     }
+    let tail = [bump];
 
     
-    let signed_seeds =[
+    let signed_seeds = [
         Seed::from(seeds[0]),
         Seed::from(seeds[1]),
-        Seed::from(core::slice::from_ref(&bump)), //todo ???
+        Seed::from(&tail)
     ];
+
     let signer = Signer::from(&signed_seeds);
 
     create_account_with_minimum_balance_signed(
         pda,
         space,
-        owner.address()    ,
+        &crate::ID,//owner is program
         owner,
         None,
         &[signer]

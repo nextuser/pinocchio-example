@@ -1,7 +1,5 @@
 use litesvm::LiteSVM;
-use solana_program::example_mocks::{solana_account::Account, solana_sdk::{address_lookup_table::instruction, system_program}};
-#[cfg(test)]
-use solana_sdk::signer::keypair;
+// use solana_program::example_mocks::{solana_account::Account, solana_sdk::{address_lookup_table::instruction, system_program}};
 use solana_system_interface;
 use solana_sdk::{
     signature::{Keypair, Signer},
@@ -14,11 +12,18 @@ use solana_sdk::{
 use solana_address::Address;
 const DEPOSIT : u8 = 0;
 const WITHDRAW : u8 = 1;
-use std::str::FromStr;
-
 use std::env;
-use std::path::Path;
+//use std::path::Path;
 use solana_keypair::read_keypair_file;
+use five8;
+use core::str::from_utf8;
+fn encode_address(address: &[u8]) -> String {
+    let mut buffer = [0u8; 44];
+    let address = address.as_ref().try_into().unwrap();
+    let count = five8::encode_32(address, &mut buffer);
+    from_utf8(&buffer[..count as usize]).unwrap().to_string()
+}
+
 
 // use solana_sdk::{
 //     program,
@@ -69,9 +74,13 @@ fn call_process(svm :&mut LiteSVM,program_id: &Address, caller : &Keypair, instr
     let accounts = vec![
         AccountMeta::new(caller.pubkey(), true),
         AccountMeta::new(pda, false),
-        AccountMeta::new(solana_program::sysvar::rent::id(), false),
-        AccountMeta::new(solana_system_interface::program::ID, false),
+        AccountMeta::new(solana_program::sysvar::rent::id(), false), //如果不传递，会出现miss account错误
+        AccountMeta::new(solana_system_interface::program::ID, false),//如果不传递，会出现miss account错误
     ];
+    println!("call process name={} pda: {}",name, pda.to_string());
+    let account_info =  svm.get_account( & pda);
+    let owner : &str = if account_info.is_none() { ""  } else {  &encode_address(account_info.unwrap().owner.as_ref())};
+    println!("pda.owner: {}", owner);
     let ins = Instruction::new_with_bytes(* program_id, instruction_data, accounts);
     let message = Message::new(
         &[ins], //instructions
@@ -86,10 +95,11 @@ fn call_process(svm :&mut LiteSVM,program_id: &Address, caller : &Keypair, instr
     let result = svm.send_transaction(tx);
     println!("after send result={:#?}",result);
     if !result.is_ok(){
+        
+        println!("reuslt failed: send transaction error {:#?}", result.unwrap_err());
         panic!("transaction failed");
-        println!("reuslt failed: send transaction error {:?}", result.unwrap_err());
     } else {
-        println!("result ok logs:   {:?}",&result.unwrap().logs);
+        println!("result ok logs:   {:#?}",&result.unwrap().logs);
     }
 
     println!("end of {}",name);
@@ -123,6 +133,7 @@ pub fn test_process(){
     let program_id = program_key.pubkey();
     deploy_program(&mut svm,  &publisher, &program_id);
     println!("deployed program id: {}",program_id);
+    
     call_deposit(&mut svm , &program_id, &caller, 5000_000);
     call_withdraw(&mut svm, &program_id, &caller );
 
