@@ -2,6 +2,8 @@ use pinocchio::error::ProgramError;
 use pinocchio::{
     Address,
 };
+const DEPOSIT_INSTRUCTION_ID: u8 = 0;
+const WITHDRAW_INSTRUCTION_ID: u8 = 1;
 pub fn parse_amount(data : &[u8] ) -> Result<u64, ProgramError>{
     let expected_len = core::mem::size_of::<u64>();
     if data.len() != expected_len {
