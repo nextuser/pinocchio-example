@@ -4,6 +4,7 @@ use pinocchio::Address;
 use pinocchio_system::{
     create_account_with_minimum_balance_signed
 };
+use pinocchio::sysvars::{Sysvar,rent::Rent};
 use pinocchio::cpi::{Seed,Signer};
 use pinocchio_log::log;
 pub fn encure_pda_created( 
@@ -44,5 +45,6 @@ pub fn encure_pda_created(
         None,
         &[signer]
     )?;
+    log!("create pda, spacelen {}, fee {}",space, Rent::get()?.try_minimum_balance(space)?);
     Ok(())
 }

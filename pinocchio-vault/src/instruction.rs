@@ -107,12 +107,12 @@ impl<'a> Withdraw<'a> {
         let rent_fee = Rent::get()?.try_minimum_balance(vault.data_len())?;
         let withdraw_amount = vault.lamports().checked_sub(rent_fee).ok_or(ProgramError::InsufficientFunds)?;
 
-        let _ = vault.lamports().checked_sub(withdraw_amount).ok_or(ProgramError::InsufficientFunds);
+        vault.set_lamports(vault.lamports().checked_sub(withdraw_amount).ok_or(ProgramError::InsufficientFunds)?);
 
-        let _ = authority.lamports().checked_add(withdraw_amount).ok_or(ProgramError::ArithmeticOverflow)?;
+        authority.set_lamports( authority.lamports().checked_add(withdraw_amount).ok_or(ProgramError::ArithmeticOverflow)?);
 
         //SystemTransfer{from:vault,to : authority,lamports:vault.lamports()}.invoke_signed(signers);
-        log!("withdraw {} from vault success",vault.lamports());
+        log!("withdraw {} from vault success,left rentfee {}, for space len : {}",vault.lamports(), rent_fee, vault.data_len());
         Ok(())
     }
 }

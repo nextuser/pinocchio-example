@@ -4,8 +4,10 @@ use solana_system_interface;
 use solana_sdk::{
     signature::{Keypair, Signer},
     pubkey::Pubkey,
+    sysvar::rent::Rent,
     instruction::AccountMeta,
     instruction::Instruction,
+
     message::Message,
     transaction::Transaction,
 };
@@ -37,7 +39,7 @@ fn encode_address(address: &[u8]) -> String {
 //     pubkey::Pubkey,
 // };
 
-fn deploy_program(svm :&mut LiteSVM,_publisher:&Keypair,program_id : &Address) {
+fn deploy_program(svm :&mut LiteSVM,_publisher:&Keypair,program_id : &Address) -> usize  {
     //use solana_sdk::{message::Instruction, signer::keypair};
 
     // let publisher = Keypair::new();
@@ -48,8 +50,10 @@ fn deploy_program(svm :&mut LiteSVM,_publisher:&Keypair,program_id : &Address) {
     let curr_dir = env::current_dir().unwrap();
     let file_path = curr_dir.join("../pinocchio-vault/target/deploy/pinocchio_vault.so");
     println!("load path {}", file_path.display());
+    let bytes = std::fs::read(file_path).expect("read file failed");
+    svm.add_program(program_id, &bytes).expect("add program failed");
     //let path = "../pinocchio-vault/target/deploy/pinocchio_vault.so";
-    svm.add_program_from_file(program_id, file_path).expect("failed to deploy");    
+    return bytes.len();
     
 }
 
@@ -62,7 +66,7 @@ fn get_airdrop_keypair(svm :&mut LiteSVM) -> Keypair {
 }
 
 
-fn call_process(svm :&mut LiteSVM,program_id: &Address, caller : &Keypair, instruction_data: &[u8], name : &str) {
+fn call_process(svm :&mut LiteSVM,program_id: &Address, caller : &Keypair, payer : &Keypair, instruction_data: &[u8], name : &str) {
 
     // let caller = Keypair::new();
     // let lamports = 1000_000_000;
@@ -76,7 +80,9 @@ fn call_process(svm :&mut LiteSVM,program_id: &Address, caller : &Keypair, instr
         AccountMeta::new(pda, false),
         AccountMeta::new(solana_program::sysvar::rent::id(), false), //如果不传递，会出现miss account错误
         AccountMeta::new(solana_system_interface::program::ID, false),//如果不传递，会出现miss account错误
+        AccountMeta::new(payer.pubkey(), true),
     ];
+    
     println!("call process name={} pda: {}",name, pda.to_string());
     let account_info =  svm.get_account( & pda);
     let owner : &str = if account_info.is_none() { ""  } else {  &encode_address(account_info.unwrap().owner.as_ref())};
@@ -84,10 +90,10 @@ fn call_process(svm :&mut LiteSVM,program_id: &Address, caller : &Keypair, instr
     let ins = Instruction::new_with_bytes(* program_id, instruction_data, accounts);
     let message = Message::new(
         &[ins], //instructions
-        Some(&caller.pubkey()),//payer
+        Some(&payer.pubkey()),//payer
         );
     let tx = Transaction::new(
-        &[&caller],
+        &[&payer,&caller],
         message,
         svm.latest_blockhash(),
     );
@@ -108,17 +114,17 @@ fn call_process(svm :&mut LiteSVM,program_id: &Address, caller : &Keypair, instr
 
 }
 
-fn call_withdraw(svm :&mut LiteSVM, program_id : &Address, caller : &Keypair){
+fn call_withdraw(svm :&mut LiteSVM, program_id : &Address, caller : &Keypair, payer : &Keypair){
     let data = [WITHDRAW];
-    call_process(svm, program_id, caller, &data, "withdraw");
+    call_process(svm, program_id, caller,payer, &data, "withdraw");
 }
 
-fn call_deposit(svm :&mut LiteSVM, program_id : &Address, caller : &Keypair, amount : u64){
+fn call_deposit(svm :&mut LiteSVM, program_id : &Address, caller : &Keypair, payer : &Keypair, amount : u64){
     let mut v = Vec::<u8>::new();
     v.push(DEPOSIT);
     let bytes = amount.to_le_bytes();
     v.extend_from_slice(&bytes);
-    call_process( svm, program_id, &caller, &v, "deposit");
+    call_process( svm, program_id, &caller, payer, &v,  "deposit");
 }
 
 #[test]
@@ -126,6 +132,7 @@ pub fn test_process(){
     let mut svm = LiteSVM::new();
     let publisher = get_airdrop_keypair(&mut svm);
     let caller = get_airdrop_keypair(&mut svm);
+    let payer = get_airdrop_keypair(&mut svm);
     let curr_dir = env::current_dir().unwrap();
     let file_path = curr_dir.join("../pinocchio-vault/target/deploy/pinocchio_vault-keypair.json");
     //let file = std::fs::File::open(file_path).expect("file not found");
@@ -133,9 +140,19 @@ pub fn test_process(){
     let program_id = program_key.pubkey();
     deploy_program(&mut svm,  &publisher, &program_id);
     println!("deployed program id: {}",program_id);
-    
-    call_deposit(&mut svm , &program_id, &caller, 5000_000);
-    call_withdraw(&mut svm, &program_id, &caller );
+    let caller_addr = caller.pubkey();
+    let rent = svm.get_sysvar::<Rent>();
+    let space = 16;
+    let rent_fee = rent.minimum_balance(space);
+    println!("rent_fee: {},for space : {}", rent_fee, space );
+    let init_balance = svm.get_balance(&caller_addr).unwrap();
+    println!("init_balance: {}", init_balance);
+    call_deposit(&mut svm , &program_id, &caller,&payer, 5000_000);
+    let balance_after_deposit = svm.get_balance(&caller_addr).unwrap();
+    assert_eq!(balance_after_deposit, init_balance - 5000_000 - rent_fee);
+    call_withdraw(&mut svm, &program_id, &caller,&payer );
+    let new_balance = svm.get_balance(&caller_addr).unwrap();
+    assert_eq!(init_balance - rent_fee, new_balance);
 
 }
 
