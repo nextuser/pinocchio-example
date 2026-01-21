@@ -1,0 +1,19 @@
+{
+  "name": "client",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "nextuser",
+  "type": "module",
+  "main": "dist/test.js",
+  "scripts": {
+    "test": "npx tsx src/test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.9",
+    "litesvm": "^0.4.0"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.98.4"
+  }
+}
