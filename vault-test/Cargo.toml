@@ -9,7 +9,7 @@ solana-program = "3.0.0"
 solana-sdk = {version = "3.0.0", features = ["full"]}
 solana-system-interface = {"version" = "3.0.0",features = ["alloc"]}
 solana-pubkey = "4.0.0"
-solana-address = {version = "2.0.0",features = ["decode"]}
+solana-address = {version = "2.0.0",features = ["decode","curve25519"]}
 serde_json = {version = "^1.0.148",features = ["std"]}
 solana-keypair = { version = "3.1.0", features = ["seed-derivable"] }
 five8 = "1.0.0"

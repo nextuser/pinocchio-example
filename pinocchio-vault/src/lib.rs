@@ -18,7 +18,8 @@ use pinocchio::{
 use pinocchio_log::log;
 
 program_entrypoint!(process_instruction);
-declare_id!("3gN1GKoQFgqBDZGaBxTwKdLrD4sYdWRbNqvgM2yiwduX");
+//declare_id!("7yrNPiHrNtd13JhHTPdwBErMnNQHzPGDzfP9vq8ScTqZ");
+declare_id!("22222222222222222222222222222222222222222222");
 default_allocator!();
 default_panic_handler!();
 

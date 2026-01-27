@@ -1,0 +1,3 @@
+[workspace]
+members = ["vault-test", "pinocchio-vault"]
+resolver = "3"

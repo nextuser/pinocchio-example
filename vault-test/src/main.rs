@@ -16,7 +16,6 @@ const DEPOSIT : u8 = 0;
 const WITHDRAW : u8 = 1;
 use std::env;
 //use std::path::Path;
-use solana_keypair::read_keypair_file;
 use five8;
 use core::str::from_utf8;
 fn encode_address(address: &[u8]) -> String {
@@ -25,6 +24,8 @@ fn encode_address(address: &[u8]) -> String {
     let count = five8::encode_32(address, &mut buffer);
     from_utf8(&buffer[..count as usize]).unwrap().to_string()
 }
+
+const PROGRAM_ID : Address = Address::from_str_const("22222222222222222222222222222222222222222222");
 
 
 // use solana_sdk::{
@@ -48,7 +49,7 @@ fn deploy_program(svm :&mut LiteSVM,_publisher:&Keypair,program_id : &Address) -
 
     //../pinocchio-vault/target/deploy/pinocchio_vault.so
     let curr_dir = env::current_dir().unwrap();
-    let file_path = curr_dir.join("../pinocchio-vault/target/deploy/pinocchio_vault.so");
+    let file_path = curr_dir.join("../target/deploy/pinocchio_vault.so");
     println!("load path {}", file_path.display());
     let bytes = std::fs::read(file_path).expect("read file failed");
     svm.add_program(program_id, &bytes).expect("add program failed");
@@ -127,30 +128,31 @@ fn call_deposit(svm :&mut LiteSVM, program_id : &Address, caller : &Keypair, pay
     call_process( svm, program_id, &caller, payer, &v,  "deposit");
 }
 
+// fn get_program_id() -> Address {
+//     let file_path = curr_dir.join("../target/deploy/pinocchio_vault-keypair.json");
+//     let program_key = read_keypair_file(file_path).unwrap();
+//     let program_id = program_key.pubkey();
+//     return program_id;
+// }
 #[test]
 pub fn test_process(){
     let mut svm = LiteSVM::new();
     let publisher = get_airdrop_keypair(&mut svm);
     let caller = get_airdrop_keypair(&mut svm);
     let payer = get_airdrop_keypair(&mut svm);
-    let curr_dir = env::current_dir().unwrap();
-    let file_path = curr_dir.join("../pinocchio-vault/target/deploy/pinocchio_vault-keypair.json");
-    //let file = std::fs::File::open(file_path).expect("file not found");
-    let program_key = read_keypair_file(file_path).unwrap();
-    let program_id = program_key.pubkey();
-    deploy_program(&mut svm,  &publisher, &program_id);
-    println!("deployed program id: {}",program_id);
+    deploy_program(&mut svm,  &publisher,&PROGRAM_ID);
+    println!("deployed program id: {}",PROGRAM_ID);
     let caller_addr = caller.pubkey();
     let rent = svm.get_sysvar::<Rent>();
-    let space = 16;
+    let space = 0;
     let rent_fee = rent.minimum_balance(space);
     println!("rent_fee: {},for space : {}", rent_fee, space );
     let init_balance = svm.get_balance(&caller_addr).unwrap();
     println!("init_balance: {}", init_balance);
-    call_deposit(&mut svm , &program_id, &caller,&payer, 5000_000);
+    call_deposit(&mut svm , &PROGRAM_ID, &caller,&payer, 5000_000);
     let balance_after_deposit = svm.get_balance(&caller_addr).unwrap();
     assert_eq!(balance_after_deposit, init_balance - 5000_000 - rent_fee);
-    call_withdraw(&mut svm, &program_id, &caller,&payer );
+    call_withdraw(&mut svm, &PROGRAM_ID, &caller,&payer );
     let new_balance = svm.get_balance(&caller_addr).unwrap();
     assert_eq!(init_balance - rent_fee, new_balance);
 
@@ -163,6 +165,6 @@ pub fn main() {
 #[test]
 fn test_path(){
     let curr_dir = env::current_dir().unwrap();
-    let file_path = curr_dir.join("../pinocchio-vault/target/deploy/pinocchio_vault.so");
+    let file_path = curr_dir.join("../target/deploy/pinocchio_vault.so");
     println!("current dir: {}", file_path.display());
 }

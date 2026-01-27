@@ -16,9 +16,9 @@ pub fn encure_pda_created(
         return Ok(());
     }
     
-    const ACCOUNT_DISCRIMINATOR_SIZE: usize = 8;
+    //const ACCOUNT_DISCRIMINATOR_SIZE: usize = 8;
 
-    let space =  ACCOUNT_DISCRIMINATOR_SIZE + core::mem::size_of::<u64>();
+    let space =  0;
 
     //let seeds = [b"vault",owner.address().as_ref()];
     //let (expected_pda, bump) = Address::find_program_address(&seeds, &crate::ID);
